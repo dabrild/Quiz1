@@ -1,0 +1,97 @@
+Controlador
+@AllArgsConstructor
+@RestController
+@RequestMapping("/equipos")
+@CrossOrigin(origins = "*")
+
+public class EquipoControlador {
+    EquipoServicio equipoServicio;
+
+    @GetMapping("/")
+    public List<Equipo> obtenerTodos(){
+        return equipoServicio.obtenerEquipos();
+    }
+
+    @GetMapping("/nombre/{nombre}")
+    public Equipo obtenerxNombre(@PathVariable String nombre){
+        return equipoServicio.obtenerxNombre(nombre);
+    }
+
+    @GetMapping("/pk/{id}")
+    public Equipo obtenerxId(@PathVariable Long id){
+        return equipoServicio.obtenerxPK(id);
+    }
+
+    @PostMapping("/")
+    public EquipoDto crear(@RequestBody EquipoDto equipo){
+        return equipoServicio.crear(equipo);
+    }
+}
+
+------------------------------------------------------------------------------
+DTO
+public record EquipoDto(@NotBlank String nombre, String nombreCorto, LocalDateTime fechaCreacion) {
+}
+---------------------------------------------------------------------------------
+Entidad
+@Entity
+@Table(name = "equipos")
+@AllArgsConstructor
+@NoArgsConstructor
+@Setter
+@Getter
+@Builder
+public class Equipo {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+    @Column(unique = true)
+    private String nombre;
+    private String nombreCorto;
+    private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaRegistro;
+}
+------------------------------------------------------------------------------------
+Repositorio
+public interface Equiporepositorio extends JpaRepository<Equipo, Long> {
+    @Query("""
+             SELECT e FROM Equipo e
+             WHERE UPPER(e.nombre) = UPPER(?1)""")
+    Equipo findByNombre(String nombre);
+    Equipo findByNombreAndNombreCorto(String nombre, String nombreCorto);
+}
+--------------------------------------------------------------------------------
+Servicio
+@Service
+@AllArgsConstructor
+public class EquipoServicio {
+    Equiporepositorio equiporepositorio;
+
+    public List<Equipo> obtenerEquipos()
+    {
+        return equiporepositorio.findAll();
+    }
+
+    public EquipoDto crear(EquipoDto equipoDto){
+        Equipo equipo = Equipo.builder()
+                .nombre(equipoDto.nombre())
+                .nombreCorto(equipoDto.nombreCorto())
+                .fechaCreacion(equipoDto.fechaCreacion())
+                .fechaRegistro(LocalDateTime.now())
+                .build();
+
+        if (equiporepositorio.save(equipo).getId()>0)
+            return  equipoDto;
+        else return null;
+        //return equiporepositorio.save(equipo);
+    }
+
+    public Equipo obtenerxNombre(String nombre){
+        return equiporepositorio.findByNombre(nombre);
+    }
+
+    public Equipo obtenerxPK(Long pk){
+        return  equiporepositorio.findById(pk).orElseThrow(null);
+    }
+}
